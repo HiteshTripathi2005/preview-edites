@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Visual Editor Demo",
+      "dependsOrder": "parallel",
+      "dependsOn": ["Start React", "Start Nuxt"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "Start React",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/react-dev && npm run dev",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Start Nuxt",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/client && npm run dev",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}
