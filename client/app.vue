@@ -53,6 +53,24 @@ const reactFrame = ref(null);
 
 onMounted(() => {
   console.log("React app with element inspector loaded");
+
+  // Add message listener for cross-origin communication from React app
+  window.addEventListener("message", (event) => {
+    // Ensure the message is from the trusted React app origin
+    if (event.origin === "http://localhost:5173") {
+      const message = event.data;
+      if (message.type === "ELEMENT_SELECTED" && message.id) {
+        console.log("Received element ID from React app:", message.id);
+        // You can now use the received ID in your Nuxt app, e.g., display it in the UI
+        // For demonstration, let's log it and optionally update a reactive variable
+      } else if (message.type === "ELEMENT_UPDATED" && message.id && message.property) {
+        console.log(
+          `Element ID: ${message.id}, Property: ${message.property}, New Value: ${message.value}`
+        );
+        // Here you can update your Nuxt UI or data based on the received change
+      }
+    }
+  });
 });
 </script>
 

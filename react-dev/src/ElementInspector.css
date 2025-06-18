@@ -250,7 +250,8 @@
   background: #f9fafb;
 }
 
-/* Element highlighting styles */
+/* Essential element highlighting styles that require !important */
+
 .inspector-hover {
   outline: 2px dashed #fbbf24 !important;
   outline-offset: 2px !important;
