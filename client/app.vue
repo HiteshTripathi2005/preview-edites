@@ -1,12 +1,15 @@
 <template>
   <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold text-red-400 mb-4">React Element Inspector Demo</h1>
+    <h1 class="text-3xl font-bold text-red-400 mb-4">
+      React Element Inspector Demo
+    </h1>
 
     <div class="bg-gray-50 rounded-lg p-4 mb-4">
       <h2 class="text-lg font-semibold mb-2">Built-in Element Inspector</h2>
       <p class="text-gray-700 mb-4">
-        The React app now has a built-in element inspector similar to browser dev tools. 
-        Look for the blue 🔍 button in the top-right corner of the React app below.
+        The React app now has a built-in element inspector similar to browser
+        dev tools. Look for the blue 🔍 button in the top-right corner of the
+        React app below.
       </p>
       <div class="bg-blue-50 border border-blue-200 rounded p-3">
         <h3 class="font-medium text-blue-800 mb-2">How to use:</h3>
@@ -15,8 +18,14 @@
           <li>• Click "Inspect Element" to enter inspection mode</li>
           <li>• Click on any element to select and edit it</li>
           <li>• Use the inspector panel to change text, colors, and styles</li>
-          <li>• Press <kbd class="bg-blue-100 px-1 rounded">Ctrl+Shift+I</kbd> to toggle the inspector</li>
-          <li>• Press <kbd class="bg-blue-100 px-1 rounded">Escape</kbd> to exit inspection mode</li>
+          <li>
+            • Press <kbd class="bg-blue-100 px-1 rounded">Ctrl+Shift+I</kbd> to
+            toggle the inspector
+          </li>
+          <li>
+            • Press <kbd class="bg-blue-100 px-1 rounded">Escape</kbd> to exit
+            inspection mode
+          </li>
         </ul>
       </div>
     </div>
@@ -26,13 +35,14 @@
       <div class="bg-gray-100 p-2 flex justify-between items-center">
         <span class="font-medium">React App with Element Inspector</span>
         <a
-          href="http://localhost:5173"
+          href="https://preview-edites-pn9a.vercel.app/"
           target="_blank"
           class="text-blue-500 hover:underline text-sm"
-        >Open in new tab</a>
+          >Open in new tab</a
+        >
       </div>
       <iframe
-        src="http://localhost:5173"
+        src="https://preview-edites-pn9a.vercel.app/"
         class="w-full h-[700px] border-0"
         title="React App with Element Inspector"
         ref="reactFrame"
@@ -40,8 +50,10 @@
     </div>
 
     <div class="mt-4 text-sm text-gray-600">
-      <p><strong>Note:</strong> All changes are preview-only and don't modify the source code. 
-      This is perfect for design iteration and prototyping.</p>
+      <p>
+        <strong>Note:</strong> All changes are preview-only and don't modify the
+        source code. This is perfect for design iteration and prototyping.
+      </p>
     </div>
   </div>
 </template>
@@ -57,13 +69,17 @@ onMounted(() => {
   // Add message listener for cross-origin communication from React app
   window.addEventListener("message", (event) => {
     // Ensure the message is from the trusted React app origin
-    if (event.origin === "http://localhost:5173") {
+    if (event.origin === "https://preview-edites-pn9a.vercel.app/") {
       const message = event.data;
       if (message.type === "ELEMENT_SELECTED" && message.id) {
         console.log("Received element ID from React app:", message.id);
         // You can now use the received ID in your Nuxt app, e.g., display it in the UI
         // For demonstration, let's log it and optionally update a reactive variable
-      } else if (message.type === "ELEMENT_UPDATED" && message.id && message.property) {
+      } else if (
+        message.type === "ELEMENT_UPDATED" &&
+        message.id &&
+        message.property
+      ) {
         console.log(
           `Element ID: ${message.id}, Property: ${message.property}, New Value: ${message.value}`
         );

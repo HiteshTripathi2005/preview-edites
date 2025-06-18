@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./ElementInspector.css";
 
-const LOCAL_STORAGE_KEY = 'inspector_saved_changes';
+const LOCAL_STORAGE_KEY = "inspector_saved_changes";
 
 const ElementInspector = () => {
   const [isInspecting, setIsInspecting] = useState(false);
@@ -96,7 +96,10 @@ const ElementInspector = () => {
 
     // Send message to parent (Nuxt) with the selected element's ID
     if (element.id && window.parent) {
-      window.parent.postMessage({ type: 'ELEMENT_SELECTED', id: element.id }, 'http://localhost:3000');
+      window.parent.postMessage(
+        { type: "ELEMENT_SELECTED", id: element.id },
+        "https://preview-edites.vercel.app/"
+      );
     }
 
     // Set editing text
@@ -120,7 +123,9 @@ const ElementInspector = () => {
 
   const saveElementChange = (id, property, value) => {
     try {
-      const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+      const storedChanges = JSON.parse(
+        localStorage.getItem(LOCAL_STORAGE_KEY) || "{}"
+      );
       if (!storedChanges[id]) {
         storedChanges[id] = {};
       }
@@ -141,20 +146,25 @@ const ElementInspector = () => {
     // Send update message to parent (Nuxt)
     if (selectedElement.id && window.parent) {
       window.parent.postMessage(
-        { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: 'textContent', value: newText },
-        'http://localhost:3000'
+        {
+          type: "ELEMENT_UPDATED",
+          id: selectedElement.id,
+          property: "textContent",
+          value: newText,
+        },
+        "https://preview-edites.vercel.app/"
       );
     }
 
     // Save change to localStorage only if enabled
     if (saveToLocalStorage && selectedElement.id) {
-      saveElementChange(selectedElement.id, 'textContent', newText);
+      saveElementChange(selectedElement.id, "textContent", newText);
     }
   };
 
   const updateElementStyle = (property, value) => {
     if (!selectedElement) return;
-    
+
     // Handle "Default" option - reset to original style
     if (value === "" || value === "Default") {
       const original = originalStyles.get(selectedElement);
@@ -162,37 +172,56 @@ const ElementInspector = () => {
         // Remove existing Tailwind classes for this property
         const removeExistingClasses = (property) => {
           switch (property) {
-            case 'color':
-              selectedElement.className = selectedElement.className.replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '').trim();
+            case "color":
+              selectedElement.className = selectedElement.className
+                .replace(
+                  /text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g,
+                  ""
+                )
+                .trim();
               break;
-            case 'backgroundColor':
-              selectedElement.className = selectedElement.className.replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '').trim();
+            case "backgroundColor":
+              selectedElement.className = selectedElement.className
+                .replace(
+                  /bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g,
+                  ""
+                )
+                .trim();
               break;
-            case 'fontSize':
-              selectedElement.className = selectedElement.className.replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '').trim();
+            case "fontSize":
+              selectedElement.className = selectedElement.className
+                .replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, "")
+                .trim();
               break;
-            case 'padding':
-              selectedElement.className = selectedElement.className.replace(/p-\d+/g, '').trim();
+            case "padding":
+              selectedElement.className = selectedElement.className
+                .replace(/p-\d+/g, "")
+                .trim();
               break;
           }
         };
 
         removeExistingClasses(property);
-        
+
         // Reset to original computed style
         selectedElement.style[property] = original[property];
-        
+
         // Remove from localStorage
         if (saveToLocalStorage && selectedElement.id) {
           try {
-            const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+            const storedChanges = JSON.parse(
+              localStorage.getItem(LOCAL_STORAGE_KEY) || "{}"
+            );
             if (storedChanges[selectedElement.id]) {
               delete storedChanges[selectedElement.id][property];
               // If no more changes for this element, remove the element entry
               if (Object.keys(storedChanges[selectedElement.id]).length === 0) {
                 delete storedChanges[selectedElement.id];
               }
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedChanges));
+              localStorage.setItem(
+                LOCAL_STORAGE_KEY,
+                JSON.stringify(storedChanges)
+              );
             }
           } catch (e) {
             console.error("Error updating localStorage:", e);
@@ -202,98 +231,117 @@ const ElementInspector = () => {
         // Send update message to parent (Nuxt)
         if (selectedElement.id && window.parent) {
           window.parent.postMessage(
-            { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: property, value: 'default' },
-            'http://localhost:3000'
+            {
+              type: "ELEMENT_UPDATED",
+              id: selectedElement.id,
+              property: property,
+              value: "default",
+            },
+            "https://preview-edites.vercel.app/"
           );
         }
       }
       return;
     }
-    
+
     // Convert CSS values to Tailwind classes
     const getTailwindClass = (property, value) => {
       switch (property) {
-        case 'color':
+        case "color":
           const colorMap = {
-            '#000000': 'text-black',
-            '#374151': 'text-gray-700',
-            '#6B7280': 'text-gray-500',
-            '#EF4444': 'text-red-500',
-            '#3B82F6': 'text-blue-500',
-            '#10B981': 'text-green-500',
-            '#F59E0B': 'text-yellow-500',
-            '#8B5CF6': 'text-purple-500',
-            '#EC4899': 'text-pink-500',
-            '#6366F1': 'text-indigo-500'
+            "#000000": "text-black",
+            "#374151": "text-gray-700",
+            "#6B7280": "text-gray-500",
+            "#EF4444": "text-red-500",
+            "#3B82F6": "text-blue-500",
+            "#10B981": "text-green-500",
+            "#F59E0B": "text-yellow-500",
+            "#8B5CF6": "text-purple-500",
+            "#EC4899": "text-pink-500",
+            "#6366F1": "text-indigo-500",
           };
           return colorMap[value] || null;
-          
-        case 'backgroundColor':
+
+        case "backgroundColor":
           const bgColorMap = {
-            'transparent': 'bg-transparent',
-            '#FFFFFF': 'bg-white',
-            '#F3F4F6': 'bg-gray-100',
-            '#E5E7EB': 'bg-gray-200',
-            '#FEE2E2': 'bg-red-100',
-            '#DBEAFE': 'bg-blue-100',
-            '#D1FAE5': 'bg-green-100',
-            '#FEF3C7': 'bg-yellow-100',
-            '#E9D5FF': 'bg-purple-100',
-            '#FCE7F3': 'bg-pink-100'
+            transparent: "bg-transparent",
+            "#FFFFFF": "bg-white",
+            "#F3F4F6": "bg-gray-100",
+            "#E5E7EB": "bg-gray-200",
+            "#FEE2E2": "bg-red-100",
+            "#DBEAFE": "bg-blue-100",
+            "#D1FAE5": "bg-green-100",
+            "#FEF3C7": "bg-yellow-100",
+            "#E9D5FF": "bg-purple-100",
+            "#FCE7F3": "bg-pink-100",
           };
           return bgColorMap[value] || null;
-          
-        case 'fontSize':
+
+        case "fontSize":
           const fontSizeMap = {
-            '12px': 'text-xs',
-            '14px': 'text-sm',
-            '16px': 'text-base',
-            '18px': 'text-lg',
-            '20px': 'text-xl',
-            '24px': 'text-2xl',
-            '32px': 'text-3xl'
+            "12px": "text-xs",
+            "14px": "text-sm",
+            "16px": "text-base",
+            "18px": "text-lg",
+            "20px": "text-xl",
+            "24px": "text-2xl",
+            "32px": "text-3xl",
           };
           return fontSizeMap[value] || null;
-          
-        case 'padding':
+
+        case "padding":
           const paddingMap = {
-            '4px': 'p-1',
-            '8px': 'p-2',
-            '12px': 'p-3',
-            '16px': 'p-4',
-            '20px': 'p-5',
-            '24px': 'p-6'
+            "4px": "p-1",
+            "8px": "p-2",
+            "12px": "p-3",
+            "16px": "p-4",
+            "20px": "p-5",
+            "24px": "p-6",
           };
           return paddingMap[value] || null;
-          
+
         default:
           return null;
       }
     };
 
     const tailwindClass = getTailwindClass(property, value);
-    
+
     if (tailwindClass) {
       // Remove existing classes for this property
       const removeExistingClasses = (property) => {
         switch (property) {
-          case 'color':
-            selectedElement.className = selectedElement.className.replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '').trim();
+          case "color":
+            selectedElement.className = selectedElement.className
+              .replace(
+                /text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g,
+                ""
+              )
+              .trim();
             break;
-          case 'backgroundColor':
-            selectedElement.className = selectedElement.className.replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '').trim();
+          case "backgroundColor":
+            selectedElement.className = selectedElement.className
+              .replace(
+                /bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g,
+                ""
+              )
+              .trim();
             break;
-          case 'fontSize':
-            selectedElement.className = selectedElement.className.replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '').trim();
+          case "fontSize":
+            selectedElement.className = selectedElement.className
+              .replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, "")
+              .trim();
             break;
-          case 'padding':
-            selectedElement.className = selectedElement.className.replace(/p-\d+/g, '').trim();
+          case "padding":
+            selectedElement.className = selectedElement.className
+              .replace(/p-\d+/g, "")
+              .trim();
             break;
         }
       };
 
       removeExistingClasses(property);
-      
+
       // Add the new Tailwind class
       selectedElement.classList.add(tailwindClass);
     } else {
@@ -304,8 +352,13 @@ const ElementInspector = () => {
     // Send update message to parent (Nuxt)
     if (selectedElement.id && window.parent) {
       window.parent.postMessage(
-        { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: property, value: tailwindClass || value },
-        'http://localhost:3000'
+        {
+          type: "ELEMENT_UPDATED",
+          id: selectedElement.id,
+          property: property,
+          value: tailwindClass || value,
+        },
+        "https://preview-edites.vercel.app/"
       );
     }
 
@@ -322,11 +375,17 @@ const ElementInspector = () => {
     if (original) {
       // Remove all inspector-added Tailwind classes
       selectedElement.className = selectedElement.className
-        .replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '')
-        .replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '')
-        .replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '')
-        .replace(/p-\d+/g, '')
-        .replace(/\s+/g, ' ')
+        .replace(
+          /text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g,
+          ""
+        )
+        .replace(
+          /bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g,
+          ""
+        )
+        .replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, "")
+        .replace(/p-\d+/g, "")
+        .replace(/\s+/g, " ")
         .trim();
 
       // Reset inline styles to original computed values
@@ -342,10 +401,14 @@ const ElementInspector = () => {
     // Also remove from localStorage if element has an ID and saving is enabled
     if (saveToLocalStorage && selectedElement && selectedElement.id) {
       try {
-        const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
+        const storedChanges = JSON.parse(
+          localStorage.getItem(LOCAL_STORAGE_KEY) || "{}"
+        );
         delete storedChanges[selectedElement.id]; // Remove all changes for this element
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedChanges));
-        console.log(`Removed saved changes for ${selectedElement.id} from localStorage.`);
+        console.log(
+          `Removed saved changes for ${selectedElement.id} from localStorage.`
+        );
       } catch (e) {
         console.error("Error removing from localStorage on reset:", e);
       }
@@ -363,7 +426,7 @@ const ElementInspector = () => {
   // Function to clear all localStorage when toggle is turned off
   const handleSaveToggle = (enabled) => {
     setSaveToLocalStorage(enabled);
-    
+
     if (!enabled) {
       // Optionally clear all saved changes when turning off
       try {
@@ -450,20 +513,27 @@ const ElementInspector = () => {
   }
 
   return (
-    <div ref={inspectorRef} className="fixed top-5 right-5 w-[350px] max-h-[calc(100vh-40px)] bg-white border border-gray-200 rounded-lg shadow-xl font-sans text-sm z-[10000] overflow-hidden flex flex-col">
+    <div
+      ref={inspectorRef}
+      className="fixed top-5 right-5 w-[350px] max-h-[calc(100vh-40px)] bg-white border border-gray-200 rounded-lg shadow-xl font-sans text-sm z-[10000] overflow-hidden flex flex-col"
+    >
       <div className="bg-slate-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="m-0 text-base font-semibold text-gray-800">Element Inspector</h3>
+        <h3 className="m-0 text-base font-semibold text-gray-800">
+          Element Inspector
+        </h3>
         <div className="flex gap-2 items-center">
           <button
             onClick={toggleInspectMode}
             className={`px-3 py-1.5 border border-gray-300 rounded text-xs cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
-              isInspecting ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-700"
+              isInspecting
+                ? "bg-blue-500 text-white border-blue-500"
+                : "bg-white text-gray-700"
             }`}
           >
             {isInspecting ? "Exit Inspect" : "Inspect Element"}
           </button>
-          <button 
-            onClick={toggleInspector} 
+          <button
+            onClick={toggleInspector}
             className="w-6 h-6 border-none bg-none text-gray-500 cursor-pointer rounded flex items-center justify-center text-lg hover:bg-gray-100 hover:text-gray-700"
           >
             ×
@@ -481,15 +551,19 @@ const ElementInspector = () => {
             onChange={(e) => handleSaveToggle(e.target.checked)}
             className="sr-only"
           />
-          <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
-            saveToLocalStorage ? 'bg-blue-500' : 'bg-gray-300'
-          }`}>
-            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
-              saveToLocalStorage ? 'translate-x-4' : 'translate-x-0.5'
-            }`}></div>
+          <div
+            className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+              saveToLocalStorage ? "bg-blue-500" : "bg-gray-300"
+            }`}
+          >
+            <div
+              className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
+                saveToLocalStorage ? "translate-x-4" : "translate-x-0.5"
+              }`}
+            ></div>
           </div>
           <span className="ml-2 text-xs text-gray-600">
-            {saveToLocalStorage ? 'On' : 'Off'}
+            {saveToLocalStorage ? "On" : "Off"}
           </span>
         </label>
       </div>
@@ -497,7 +571,9 @@ const ElementInspector = () => {
       {selectedElement ? (
         <div className="flex-1 overflow-y-auto p-4">
           <div className="mb-4">
-            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">Selected Element</h4>
+            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">
+              Selected Element
+            </h4>
             <p className="my-1 text-gray-600 text-xs">
               <strong>Tag:</strong> {selectedElement.tagName.toLowerCase()}
             </p>
@@ -510,7 +586,9 @@ const ElementInspector = () => {
           </div>
 
           <div className="mb-4">
-            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">Edit Text</h4>
+            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">
+              Edit Text
+            </h4>
             <textarea
               value={editingText}
               onChange={(e) => updateElementText(e.target.value)}
@@ -520,10 +598,14 @@ const ElementInspector = () => {
           </div>
 
           <div className="mb-4">
-            <h4 className="m-0 mb-3 text-sm font-semibold text-gray-800">Style Controls</h4>
+            <h4 className="m-0 mb-3 text-sm font-semibold text-gray-800">
+              Style Controls
+            </h4>
 
             <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Text Color</label>
+              <label className="block mb-1.5 text-xs font-medium text-gray-700">
+                Text Color
+              </label>
               <div className="grid grid-cols-5 gap-1">
                 {colorOptions.map((color) => (
                   <button
@@ -538,14 +620,19 @@ const ElementInspector = () => {
             </div>
 
             <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Background Color</label>
+              <label className="block mb-1.5 text-xs font-medium text-gray-700">
+                Background Color
+              </label>
               <div className="grid grid-cols-5 gap-1">
                 {backgroundOptions.map((color) => (
                   <button
                     key={color}
                     onClick={() => updateElementStyle("backgroundColor", color)}
                     className="w-6 h-6 border border-gray-300 rounded cursor-pointer transition-transform duration-100 hover:scale-110 hover:border-gray-700"
-                    style={{ backgroundColor: color === "transparent" ? "#ffffff" : color }}
+                    style={{
+                      backgroundColor:
+                        color === "transparent" ? "#ffffff" : color,
+                    }}
                     title={color}
                   />
                 ))}
@@ -553,7 +640,9 @@ const ElementInspector = () => {
             </div>
 
             <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Font Size</label>
+              <label className="block mb-1.5 text-xs font-medium text-gray-700">
+                Font Size
+              </label>
               <select
                 onChange={(e) => updateElementStyle("fontSize", e.target.value)}
                 className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
@@ -570,7 +659,9 @@ const ElementInspector = () => {
             </div>
 
             <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Padding</label>
+              <label className="block mb-1.5 text-xs font-medium text-gray-700">
+                Padding
+              </label>
               <select
                 onChange={(e) => updateElementStyle("padding", e.target.value)}
                 className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
