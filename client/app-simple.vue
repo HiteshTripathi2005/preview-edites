@@ -178,7 +178,7 @@
             ✓ Edit Mode Active
           </span>
           <a
-            href="http://localhost:5173"
+            href="https://preview-edites-pn9a.vercel.app/"
             target="_blank"
             class="text-blue-500 hover:underline text-sm"
             >Open in new tab</a
@@ -186,7 +186,7 @@
         </div>
       </div>
       <iframe
-        src="http://localhost:5173"
+        src="https://preview-edites-pn9a.vercel.app/"
         class="w-full h-[600px] border-0"
         title="React App Preview"
         ref="reactFrame"
