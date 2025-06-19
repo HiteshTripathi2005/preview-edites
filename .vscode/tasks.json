@@ -11,6 +11,17 @@
       }
     },
     {
+      "label": "Add Inspector IDs",
+      "type": "shell",
+      "command": "cd ${workspaceFolder}/react-dev && npm run add-ids",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
       "label": "Start React",
       "type": "shell",
       "command": "cd ${workspaceFolder}/react-dev && npm run dev",

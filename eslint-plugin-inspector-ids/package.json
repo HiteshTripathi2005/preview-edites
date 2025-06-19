@@ -1,0 +1,18 @@
+{
+  "name": "eslint-plugin-inspector-ids",
+  "version": "1.0.0",
+  "description": "ESLint plugin to automatically add IDs and data attributes for element inspector",
+  "main": "index.js",
+  "keywords": ["eslint", "plugin", "react", "inspector", "auto-fix"],
+  "author": "Your Name",
+  "license": "MIT",
+  "peerDependencies": {
+    "eslint": ">=7.0.0"
+  },
+  "dependencies": {
+    "@babel/core": "^7.22.0",
+    "@babel/parser": "^7.22.0",
+    "@babel/traverse": "^7.22.0",
+    "@babel/types": "^7.22.0"
+  }
+}

@@ -1,67 +1,69 @@
-# React Element Inspector Demo
+# React Auto-ID Inspector Demo
 
-A simple demonstration of a visual element inspector built into a React application, similar to browser developer tools.
+A React application with automatic ID and data attribute generation for visual element inspection.
 
 ## Project Structure
 
 ```
-├── client/          # Nuxt 3 app (displays the React app in iframe)
-├── react-dev/       # React app with built-in element inspector
+├── client/          # Nuxt 3 app (optional - displays React app in iframe)
+├── react-dev/       # React app with auto-ID system and element inspector
 └── .vscode/         # VS Code tasks for easy development
 ```
 
 ## Features
 
-- **🔍 Element Inspector**: Click-to-select and edit elements visually
-- **Real-time Editing**: Change text, colors, font sizes, and padding
-- **Visual Feedback**: Hover highlights and selection outlines
-- **Keyboard Shortcuts**:
-  - `Ctrl+Shift+I` to toggle inspector
-  - `Escape` to exit inspection mode
-- **Reset Functionality**: Restore elements to original state
+- **🆔 Auto-ID Generation**: Automatically adds unique IDs and data attributes to JSX elements when files are saved
+- **🗂️ Array Context Tracking**: Elements in arrays get special `data-array` and `data-array-index` attributes
+- **🔍 Element Inspector**: Built-in click-to-select visual inspector
+- **⚡ Zero Manual Work**: IDs are generated automatically via Vite plugin + ESLint rule
 
-## How to Run
+## Quick Start
 
-1. **Start both applications:**
+```bash
+cd react-dev
+npm install
+npm run dev
+```
 
-   ```bash
-   # Option 1: Use VS Code task (Ctrl+Shift+P → "Run Task" → "Start Visual Editor Demo")
+Then save any `.jsx` file to see automatic ID generation in action!
 
-   # Option 2: Start manually
-   # Terminal 1 - React app
-   cd react-dev
-   npm run dev
+## How the Auto-ID System Works
 
-   # Terminal 2 - Nuxt app
-   cd client
-   npm run dev
-   ```
+1. **Vite Plugin**: Watches for `.jsx/.tsx` file changes
+2. **ESLint Rule**: Custom rule adds IDs and data attributes
+3. **Automatic**: No manual intervention needed - just save files!
 
-2. **Open in browser:**
-   - Nuxt app: http://localhost:3000 (shows React app in iframe)
-   - React app: http://localhost:5173 (direct access)
+## Example Output
 
-## How to Use Element Inspector
+When you save a file with this JSX:
+```jsx
+<div className="container">
+  <h1>Hello World</h1>
+  {items.map(item => <span key={item.id}>{item.name}</span>)}
+</div>
+```
 
-1. Look for the blue 🔍 button in the top-right corner of the React app
-2. Click it to open the inspector panel
-3. Click "Inspect Element" to enter inspection mode
-4. Click on any element (text, buttons, divs) to select it
-5. Use the inspector panel to:
-   - Edit text content
-   - Change text and background colors
-   - Adjust font size and padding
-   - Reset to original styles
+It automatically becomes:
+```jsx
+<div id="div-1" data-component="App" data-file="src/App.jsx" className="container">
+  <h1 id="h1-2" data-component="App" data-file="src/App.jsx">Hello World</h1>
+  {items.map((item, index) => 
+    <span id={`items-${item.id || index}`} data-component="App" data-file="src/App.jsx" 
+          data-array="items" data-array-index={index} key={item.id}>
+      {item.name}
+    </span>
+  )}
+</div>
+```
 
-## Key Files
+## Commands
 
-- `react-dev/src/App.jsx` - Main React component
-- `react-dev/src/ElementInspector.jsx` - Element inspector component
-- `react-dev/src/ElementInspector.css` - Inspector styles
-- `client/app.vue` - Nuxt app displaying the React iframe
+- `npm run dev` - Start with auto-ID generation
+- `npm run add-ids` - Manually add IDs to existing files
 
-## Notes
+## VS Code Tasks
 
-- All changes are preview-only and don't modify source code
-- Perfect for design iteration and prototyping
-- Inspector works within the React app context (no cross-frame issues)
+- **Start Visual Editor Demo** - Starts both React and Nuxt apps
+- **Add Inspector IDs** - Manually run ID generation
+- **Start React** - React app only
+- **Start Nuxt** - Nuxt app only

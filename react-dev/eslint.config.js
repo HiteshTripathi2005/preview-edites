@@ -2,6 +2,7 @@ import js from '@eslint/js'
 import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
+import inspectorIds from 'eslint-plugin-inspector-ids'
 
 export default [
   { ignores: ['dist'] },
@@ -19,6 +20,7 @@ export default [
     plugins: {
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'inspector-ids': inspectorIds,
     },
     rules: {
       ...js.configs.recommended.rules,
@@ -28,6 +30,11 @@ export default [
         'warn',
         { allowConstantExport: true },
       ],
+      'inspector-ids/add-inspector-ids': ['error', {
+        autoGenerateIds: true,
+        addDataAttributes: true,
+        skipElements: ['Fragment', 'React.Fragment']
+      }],
     },
   },
 ]

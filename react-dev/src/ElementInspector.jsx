@@ -84,6 +84,63 @@ const ElementInspector = () => {
     event.target.classList.remove("inspector-hover");
   };
 
+  // Helper function to parse array context from element ID
+  const parseArrayContext = (elementId) => {
+    if (!elementId) return null;
+    
+    // Pattern: arrayName-index or arrayName-index-property
+    // Examples: task-1, task-1-title, product-0-description, user-5-avatar
+    const arrayPattern = /^(\w+)-(\d+)(?:-(.+))?$/;
+    const match = elementId.match(arrayPattern);
+    
+    if (match) {
+      return {
+        arrayName: match[1],
+        index: parseInt(match[2]),
+        property: match[3] || 'root',
+        isArrayElement: true
+      };
+    }
+    
+    return { isArrayElement: false };
+  };
+
+  // Helper function to extract component context from element
+  const getComponentContext = (element) => {
+    // Try to get component info from data attributes
+    const componentName = element.getAttribute('data-component');
+    const fileName = element.getAttribute('data-file');
+    const arrayName = element.getAttribute('data-array');
+    const arrayIndex = element.getAttribute('data-array-index');
+    
+    // If not found on current element, try to find in parent elements
+    let currentElement = element;
+    let foundContext = { componentName, fileName, arrayName, arrayIndex };
+    
+    while (currentElement && currentElement !== document.body && (!foundContext.componentName || !foundContext.fileName)) {
+      if (!foundContext.componentName) {
+        foundContext.componentName = currentElement.getAttribute('data-component');
+      }
+      if (!foundContext.fileName) {
+        foundContext.fileName = currentElement.getAttribute('data-file');
+      }
+      if (!foundContext.arrayName) {
+        foundContext.arrayName = currentElement.getAttribute('data-array');
+      }
+      if (!foundContext.arrayIndex) {
+        foundContext.arrayIndex = currentElement.getAttribute('data-array-index');
+      }
+      currentElement = currentElement.parentElement;
+    }
+    
+    return {
+      componentName: foundContext.componentName || 'Unknown',
+      fileName: foundContext.fileName || 'Unknown',
+      arrayName: foundContext.arrayName,
+      arrayIndex: foundContext.arrayIndex ? parseInt(foundContext.arrayIndex) : null
+    };
+  };
+
   const selectElement = (element) => {
     // Clear previous selection
     if (selectedElement) {
@@ -94,9 +151,28 @@ const ElementInspector = () => {
     setSelectedElement(element);
     element.classList.add("inspector-selected");
 
-    // Send message to parent (Nuxt) with the selected element's ID
+    // Parse array context from element ID
+    const arrayContext = parseArrayContext(element.id);
+    
+    // Get component context
+    const componentContext = getComponentContext(element);
+    
+    // Send enhanced message to parent (Nuxt) with array and component context
     if (element.id && window.parent) {
-      window.parent.postMessage({ type: 'ELEMENT_SELECTED', id: element.id }, 'http://localhost:3000');
+      const message = {
+        type: 'ELEMENT_SELECTED',
+        id: element.id,
+        arrayContext: arrayContext,
+        componentContext: componentContext,
+        elementInfo: {
+          tagName: element.tagName.toLowerCase(),
+          textContent: element.textContent,
+          className: element.className
+        }
+      };
+      
+      console.log("Sending message with array and component context:", message);
+      window.parent.postMessage(message, 'http://localhost:3000');
     }
 
     // Set editing text
@@ -138,12 +214,25 @@ const ElementInspector = () => {
     setEditingText(newText);
     selectedElement.textContent = newText;
 
-    // Send update message to parent (Nuxt)
+    // Parse array context for updates
+    const arrayContext = parseArrayContext(selectedElement.id);
+    
+    // Get component context for updates
+    const componentContext = getComponentContext(selectedElement);
+
+    // Send enhanced update message to parent (Nuxt)
     if (selectedElement.id && window.parent) {
-      window.parent.postMessage(
-        { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: 'textContent', value: newText },
-        'http://localhost:3000'
-      );
+      const message = {
+        type: 'ELEMENT_UPDATED',
+        id: selectedElement.id,
+        property: 'textContent',
+        value: newText,
+        arrayContext: arrayContext,
+        componentContext: componentContext
+      };
+      
+      console.log("Sending text update with array and component context:", message);
+      window.parent.postMessage(message, 'http://localhost:3000');
     }
 
     // Save change to localStorage only if enabled
@@ -437,8 +526,8 @@ const ElementInspector = () => {
 
   if (!isVisible) {
     return (
-      <div className="fixed top-5 right-5 z-[10000]">
-        <button
+      <div id="div-5" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="fixed top-5 right-5 z-[10000]">
+        <button id="button-6" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
           onClick={toggleInspector}
           className="w-12 h-12 rounded-full bg-blue-500 text-white border-none text-xl cursor-pointer shadow-lg transition-all duration-200 hover:bg-blue-600 hover:scale-105"
           title="Open Element Inspector (Ctrl+Shift+I)"
@@ -450,11 +539,11 @@ const ElementInspector = () => {
   }
 
   return (
-    <div ref={inspectorRef} className="fixed top-5 right-5 w-[350px] max-h-[calc(100vh-40px)] bg-white border border-gray-200 rounded-lg shadow-xl font-sans text-sm z-[10000] overflow-hidden flex flex-col">
-      <div className="bg-slate-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="m-0 text-base font-semibold text-gray-800">Element Inspector</h3>
-        <div className="flex gap-2 items-center">
-          <button
+    <div id="div-7" data-component="ElementInspector" data-file="src/ElementInspector.jsx" ref={inspectorRef} className="fixed top-5 right-5 w-[350px] max-h-[calc(100vh-40px)] bg-white border border-gray-200 rounded-lg shadow-xl font-sans text-sm z-[10000] overflow-hidden flex flex-col">
+      <div id="div-8" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="bg-slate-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+        <h3 id="h3-9" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 text-base font-semibold text-gray-800">Element Inspector</h3>
+        <div id="div-10" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex gap-2 items-center">
+          <button id="button-11" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
             onClick={toggleInspectMode}
             className={`px-3 py-1.5 border border-gray-300 rounded text-xs cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
               isInspecting ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-700"
@@ -462,7 +551,7 @@ const ElementInspector = () => {
           >
             {isInspecting ? "Exit Inspect" : "Inspect Element"}
           </button>
-          <button 
+          <button id="button-12" data-component="ElementInspector" data-file="src/ElementInspector.jsx" 
             onClick={toggleInspector} 
             className="w-6 h-6 border-none bg-none text-gray-500 cursor-pointer rounded flex items-center justify-center text-lg hover:bg-gray-100 hover:text-gray-700"
           >
@@ -472,46 +561,46 @@ const ElementInspector = () => {
       </div>
 
       {/* Save to localStorage Toggle */}
-      <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <span className="text-xs font-medium text-gray-700">Save changes</span>
-        <label className="flex items-center cursor-pointer">
-          <input
+      <div id="div-13" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+        <span id="span-14" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-xs font-medium text-gray-700">Save changes</span>
+        <label id="label-15" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center cursor-pointer">
+          <input id="input-16" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
             type="checkbox"
             checked={saveToLocalStorage}
             onChange={(e) => handleSaveToggle(e.target.checked)}
             className="sr-only"
           />
-          <div className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
+          <div id="div-17" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
             saveToLocalStorage ? 'bg-blue-500' : 'bg-gray-300'
           }`}>
-            <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
+            <div id="div-18" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
               saveToLocalStorage ? 'translate-x-4' : 'translate-x-0.5'
             }`}></div>
           </div>
-          <span className="ml-2 text-xs text-gray-600">
+          <span id="span-19" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="ml-2 text-xs text-gray-600">
             {saveToLocalStorage ? 'On' : 'Off'}
           </span>
         </label>
       </div>
 
       {selectedElement ? (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="mb-4">
-            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">Selected Element</h4>
-            <p className="my-1 text-gray-600 text-xs">
-              <strong>Tag:</strong> {selectedElement.tagName.toLowerCase()}
+        <div id="div-20" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex-1 overflow-y-auto p-4">
+          <div id="div-21" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
+            <h4 id="h4-22" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-2 text-sm font-semibold text-gray-800">Selected Element</h4>
+            <p id="p-23" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
+              <strong id="strong-24" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Tag:</strong> {selectedElement.tagName.toLowerCase()}
             </p>
-            <p className="my-1 text-gray-600 text-xs">
-              <strong>Classes:</strong> {selectedElement.className || "None"}
+            <p id="p-25" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
+              <strong id="strong-26" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Classes:</strong> {selectedElement.className || "None"}
             </p>
-            <p className="my-1 text-gray-600 text-xs">
-              <strong>ID:</strong> {selectedElement.id || "None"}
+            <p id="p-27" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
+              <strong id="strong-28" data-component="ElementInspector" data-file="src/ElementInspector.jsx">ID:</strong> {selectedElement.id || "None"}
             </p>
           </div>
 
-          <div className="mb-4">
-            <h4 className="m-0 mb-2 text-sm font-semibold text-gray-800">Edit Text</h4>
-            <textarea
+          <div id="div-29" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
+            <h4 id="h4-30" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-2 text-sm font-semibold text-gray-800">Edit Text</h4>
+            <textarea id="textarea-31" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
               value={editingText}
               onChange={(e) => updateElementText(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded text-xs font-inherit resize-y min-h-[60px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
@@ -519,14 +608,14 @@ const ElementInspector = () => {
             />
           </div>
 
-          <div className="mb-4">
-            <h4 className="m-0 mb-3 text-sm font-semibold text-gray-800">Style Controls</h4>
+          <div id="div-32" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
+            <h4 id="h4-33" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-3 text-sm font-semibold text-gray-800">Style Controls</h4>
 
-            <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Text Color</label>
-              <div className="grid grid-cols-5 gap-1">
+            <div id="div-34" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
+              <label id="label-35" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Text Color</label>
+              <div id="div-36" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="grid grid-cols-5 gap-1">
                 {colorOptions.map((color) => (
-                  <button
+                  <button id={`colorOptions-${color.id || index}`} data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-array="colorOptions" data-array-index={index}
                     key={color}
                     onClick={() => updateElementStyle("color", color)}
                     className="w-6 h-6 border border-gray-300 rounded cursor-pointer transition-transform duration-100 hover:scale-110 hover:border-gray-700"
@@ -537,11 +626,11 @@ const ElementInspector = () => {
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Background Color</label>
-              <div className="grid grid-cols-5 gap-1">
+            <div id="div-37" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
+              <label id="label-38" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Background Color</label>
+              <div id="div-39" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="grid grid-cols-5 gap-1">
                 {backgroundOptions.map((color) => (
-                  <button
+                  <button id={`backgroundOptions-${color.id || index}`} data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-array="backgroundOptions" data-array-index={index}
                     key={color}
                     onClick={() => updateElementStyle("backgroundColor", color)}
                     className="w-6 h-6 border border-gray-300 rounded cursor-pointer transition-transform duration-100 hover:scale-110 hover:border-gray-700"
@@ -552,48 +641,48 @@ const ElementInspector = () => {
               </div>
             </div>
 
-            <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Font Size</label>
-              <select
+            <div id="div-40" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
+              <label id="label-41" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Font Size</label>
+              <select id="select-42" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
                 onChange={(e) => updateElementStyle("fontSize", e.target.value)}
                 className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
               >
-                <option value="">Default</option>
-                <option value="12px">12px</option>
-                <option value="14px">14px</option>
-                <option value="16px">16px</option>
-                <option value="18px">18px</option>
-                <option value="20px">20px</option>
-                <option value="24px">24px</option>
-                <option value="32px">32px</option>
+                <option id="option-43" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="">Default</option>
+                <option id="option-44" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="12px">12px</option>
+                <option id="option-45" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="14px">14px</option>
+                <option id="option-46" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="16px">16px</option>
+                <option id="option-47" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="18px">18px</option>
+                <option id="option-48" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="20px">20px</option>
+                <option id="option-49" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="24px">24px</option>
+                <option id="option-50" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="32px">32px</option>
               </select>
             </div>
 
-            <div className="mb-3">
-              <label className="block mb-1.5 text-xs font-medium text-gray-700">Padding</label>
-              <select
+            <div id="div-51" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
+              <label id="label-52" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Padding</label>
+              <select id="select-53" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
                 onChange={(e) => updateElementStyle("padding", e.target.value)}
                 className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
               >
-                <option value="">Default</option>
-                <option value="4px">4px</option>
-                <option value="8px">8px</option>
-                <option value="12px">12px</option>
-                <option value="16px">16px</option>
-                <option value="20px">20px</option>
-                <option value="24px">24px</option>
+                <option id="option-54" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="">Default</option>
+                <option id="option-55" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="4px">4px</option>
+                <option id="option-56" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="8px">8px</option>
+                <option id="option-57" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="12px">12px</option>
+                <option id="option-58" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="16px">16px</option>
+                <option id="option-59" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="20px">20px</option>
+                <option id="option-60" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="24px">24px</option>
               </select>
             </div>
           </div>
 
-          <div className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
-            <button
+          <div id="div-61" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
+            <button id="button-62" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
               onClick={resetElement}
               className="flex-1 py-2 px-3 border border-gray-300 rounded bg-white text-gray-700 cursor-pointer text-xs transition-all duration-200 hover:bg-gray-50"
             >
               Reset Element
             </button>
-            <button
+            <button id="button-63" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
               onClick={clearSelection}
               className="flex-1 py-2 px-3 border border-gray-300 rounded bg-white text-gray-700 cursor-pointer text-xs transition-all duration-200 hover:bg-gray-50"
             >
@@ -602,8 +691,8 @@ const ElementInspector = () => {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
-          <div className="text-center text-gray-500 italic my-5">
+        <div id="div-64" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex-1 overflow-y-auto p-4">
+          <div id="div-65" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-center text-gray-500 italic my-5">
             {isInspecting
               ? "Click on an element to select it"
               : "Click 'Inspect Element' to start selecting elements"}
