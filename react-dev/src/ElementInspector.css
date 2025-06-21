@@ -264,6 +264,36 @@
   background-color: rgba(59, 130, 246, 0.1) !important;
 }
 
+.inspector-array-highlight {
+  outline: 2px dotted #10b981 !important;
+  outline-offset: 2px !important;
+  background-color: rgba(16, 185, 129, 0.05) !important;
+  position: relative !important;
+}
+
+.inspector-array-highlight::before {
+  content: "🔗";
+  position: absolute !important;
+  top: -8px !important;
+  right: -8px !important;
+  background: #10b981 !important;
+  color: white !important;
+  border-radius: 50% !important;
+  width: 16px !important;
+  height: 16px !important;
+  font-size: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 9999 !important;
+}
+
+.inspector-hover-array {
+  outline: 2px dotted #f59e0b !important;
+  outline-offset: 2px !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
 /* Prevent inspector from being selected */
 .element-inspector * {
   pointer-events: auto !important;

@@ -6,20 +6,19 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "add-ids": "eslint src --ext .js,.jsx,.ts,.tsx --fix"
+    "add-ids": "node src/script/babel-ids.js",
+    "add-ids-file": "node src/script/babel-ids.js"
   },
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0"
   },  "devDependencies": {
-    "@eslint/js": "^9.25.0",
+    "@babel/generator": "^7.25.0",
+    "@babel/parser": "^7.25.0",
+    "@babel/traverse": "^7.25.0",
+    "@babel/types": "^7.25.0",
     "@vitejs/plugin-react": "^4.4.1",
     "autoprefixer": "^10.4.21",
-    "eslint": "^9.25.0",
-    "eslint-plugin-inspector-ids": "file:../eslint-plugin-inspector-ids",
-    "eslint-plugin-react-hooks": "^5.2.0",
-    "eslint-plugin-react-refresh": "^0.4.19",
-    "globals": "^16.0.0",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.17",
     "vite": "^6.3.5"

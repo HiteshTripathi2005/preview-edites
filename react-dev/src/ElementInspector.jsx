@@ -1,16 +1,176 @@
 import React, { useState, useEffect, useRef } from "react";
 import "./ElementInspector.css";
 
-const LOCAL_STORAGE_KEY = 'inspector_saved_changes';
-
 const ElementInspector = () => {
   const [isInspecting, setIsInspecting] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
   const [editingText, setEditingText] = useState("");
   const [originalStyles, setOriginalStyles] = useState(new Map());
   const [isVisible, setIsVisible] = useState(false);
-  const [saveToLocalStorage, setSaveToLocalStorage] = useState(true);
   const inspectorRef = useRef(null);
+
+  // Design options
+  const colorOptions = [
+  { name: "Black", value: "#000000", tailwind: "text-black" },
+  { name: "Dark Gray", value: "#374151", tailwind: "text-gray-700" },
+  { name: "Gray", value: "#6B7280", tailwind: "text-gray-500" },
+  { name: "Red", value: "#EF4444", tailwind: "text-red-500" },
+  { name: "Blue", value: "#3B82F6", tailwind: "text-blue-500" },
+  { name: "Green", value: "#10B981", tailwind: "text-green-500" },
+  { name: "Yellow", value: "#F59E0B", tailwind: "text-yellow-500" },
+  { name: "Purple", value: "#8B5CF6", tailwind: "text-purple-500" },
+  { name: "Pink", value: "#EC4899", tailwind: "text-pink-500" },
+  { name: "Indigo", value: "#6366F1", tailwind: "text-indigo-500" }];
+
+
+  const backgroundOptions = [
+  { name: "None", value: "transparent", tailwind: "bg-transparent" },
+  { name: "White", value: "#FFFFFF", tailwind: "bg-white" },
+  { name: "Light Gray", value: "#F3F4F6", tailwind: "bg-gray-100" },
+  { name: "Gray", value: "#E5E7EB", tailwind: "bg-gray-200" },
+  { name: "Light Red", value: "#FEE2E2", tailwind: "bg-red-100" },
+  { name: "Light Blue", value: "#DBEAFE", tailwind: "bg-blue-100" },
+  { name: "Light Green", value: "#D1FAE5", tailwind: "bg-green-100" },
+  { name: "Light Yellow", value: "#FEF3C7", tailwind: "bg-yellow-100" },
+  { name: "Light Purple", value: "#E9D5FF", tailwind: "bg-purple-100" },
+  { name: "Light Pink", value: "#FCE7F3", tailwind: "bg-pink-100" }];
+
+
+  const animationOptions = [
+  { name: "None", value: "" },
+  { name: "Bounce", value: "animate-bounce" },
+  { name: "Pulse", value: "animate-pulse" },
+  { name: "Ping", value: "animate-ping" },
+  { name: "Spin", value: "animate-spin" }];
+
+
+  const fontSizeOptions = [
+  { name: "Tiny", value: "text-xs" },
+  { name: "Small", value: "text-sm" },
+  { name: "Normal", value: "text-base" },
+  { name: "Large", value: "text-lg" },
+  { name: "XL", value: "text-xl" },
+  { name: "2XL", value: "text-2xl" },
+  { name: "3XL", value: "text-3xl" }];
+
+
+  const spacingOptions = [
+  { name: "None", value: "p-0" },
+  { name: "Small", value: "p-2" },
+  { name: "Medium", value: "p-4" },
+  { name: "Large", value: "p-6" },
+  { name: "XL", value: "p-8" }];
+
+
+  const roundingOptions = [
+  { name: "None", value: "rounded-none" },
+  { name: "Small", value: "rounded-sm" },
+  { name: "Medium", value: "rounded-md" },
+  { name: "Large", value: "rounded-lg" },
+  { name: "XL", value: "rounded-xl" },
+  { name: "Full", value: "rounded-full" }];
+
+
+  // Helper functions
+  const isMapElement = (element) => {
+    return element && (
+    element.getAttribute('data-dynamic') === 'true' ||
+    element.getAttribute('data-array') !== null ||
+    element.closest('[data-array]') !== null);
+
+  };
+
+  const isTextEditingAllowed = (element) => {
+    if (!element) return false;
+    return !isMapElement(element);
+  };
+
+  const getMapInfo = (element) => {
+    if (!element) return null;
+
+    const arrayName = element.getAttribute('data-array');
+    const arrayIndex = element.getAttribute('data-array-index');
+
+    if (arrayName && arrayIndex !== null) {
+      return {
+        arrayName,
+        arrayIndex: parseInt(arrayIndex),
+        isMapElement: true
+      };
+    }
+
+    // Check if it's inside a mapped element
+    const parentArray = element.closest('[data-array]');
+    if (parentArray) {
+      return {
+        arrayName: parentArray.getAttribute('data-array'),
+        arrayIndex: parseInt(parentArray.getAttribute('data-array-index')),
+        isMapElement: true,
+        isChildOfMapped: true
+      };
+    }
+
+    return { isMapElement: false };
+  };
+
+  const getAllSimilarElements = () => {
+    if (!selectedElement) return [selectedElement];
+
+    const mapInfo = getMapInfo(selectedElement);
+    if (!mapInfo.isMapElement) {
+      return [selectedElement];
+    }
+
+    // Find all elements with the same array name and similar structure
+    const arrayName = mapInfo.arrayName;
+    const baseId = selectedElement.id;
+    const currentIndex = mapInfo.arrayIndex;
+
+    // Remove the index from the ID to get the base pattern
+    const basePattern = baseId.replace(`-${currentIndex}`, '');
+
+    // Find all similar elements
+    const allArrayElements = Array.from(document.querySelectorAll(`[data-array="${arrayName}"]`));
+    const similarElements = allArrayElements.filter((element) => {
+      const elementIndex = element.getAttribute('data-array-index');
+      const elementId = element.id;
+
+      // Include elements that match the base pattern but have different indices
+      return elementId && elementId.startsWith(basePattern) && elementIndex !== currentIndex.toString();
+    });
+
+    return [selectedElement, ...similarElements];
+  };
+
+  // Apply Tailwind class to element(s)
+  const applyTailwindClass = (property, newClass, removeClasses = []) => {
+    const elements = getAllSimilarElements();
+
+    elements.forEach((element) => {
+      // Remove old classes
+      const validClassesToRemove = removeClasses.filter((className) => className !== '');
+      if (validClassesToRemove.length > 0) {
+        element.classList.remove(...validClassesToRemove);
+      }
+
+      // Add new class
+      if (newClass && newClass !== '') {
+        element.classList.add(newClass);
+      }
+    });
+  };
+
+  // Apply text color
+  const applyTextColor = (colorData) => {
+    const textColorClasses = colorOptions.map((c) => c.tailwind);
+    applyTailwindClass('textColor', colorData.tailwind, textColorClasses);
+  };
+
+  // Apply background color
+  const applyBackgroundColor = (bgData) => {
+    const bgColorClasses = backgroundOptions.map((b) => b.tailwind);
+    applyTailwindClass('backgroundColor', bgData.tailwind, bgColorClasses);
+  };
 
   // Toggle inspector visibility
   const toggleInspector = () => {
@@ -48,10 +208,8 @@ const ElementInspector = () => {
     document.removeEventListener("mouseover", handleElementHover, true);
     document.removeEventListener("mouseout", handleElementHoverOut, true);
 
-    // Clear hover effects
-    document.querySelectorAll(".inspector-hover").forEach((el) => {
-      el.classList.remove("inspector-hover");
-    });
+    // Clear all hover effects
+    clearAllHighlights();
   };
 
   const handleElementClick = (event) => {
@@ -68,639 +226,365 @@ const ElementInspector = () => {
   };
 
   const handleElementHover = (event) => {
-    // Don't highlight the inspector itself
+    // Don't highlight the inspector itself or already selected elements
     if (
-      inspectorRef.current?.contains(event.target) ||
-      event.target === selectedElement ||
-      event.target.classList.contains("inspector-selected")
-    ) {
+    inspectorRef.current?.contains(event.target) ||
+    event.target === selectedElement ||
+    event.target.classList.contains("inspector-selected"))
+    {
       return;
     }
 
+    event.stopPropagation();
     event.target.classList.add("inspector-hover");
+
+    // For map elements, show preview of similar elements
+    const mapInfo = getMapInfo(event.target);
+    if (mapInfo.isMapElement) {
+      const arrayName = mapInfo.arrayName;
+      const baseId = event.target.id;
+      const currentIndex = mapInfo.arrayIndex;
+      const basePattern = baseId.replace(`-${currentIndex}`, '');
+
+      const similarElements = Array.from(document.querySelectorAll(`[data-array="${arrayName}"]`)).
+      filter((element) => {
+        const elementIndex = element.getAttribute('data-array-index');
+        const elementId = element.id;
+        return elementId && elementId.startsWith(basePattern) &&
+        elementIndex !== currentIndex.toString() &&
+        element !== event.target;
+      });
+
+      similarElements.forEach((element) => {
+        element.classList.add("inspector-hover-array");
+      });
+    }
   };
 
   const handleElementHoverOut = (event) => {
+    event.stopPropagation();
     event.target.classList.remove("inspector-hover");
+
+    // Remove array hover highlights
+    document.querySelectorAll('.inspector-hover-array').forEach((el) => {
+      el.classList.remove('inspector-hover-array');
+    });
   };
 
-  // Helper function to parse array context from element ID
-  const parseArrayContext = (elementId) => {
-    if (!elementId) return null;
-    
-    // Pattern: arrayName-index or arrayName-index-property
-    // Examples: task-1, task-1-title, product-0-description, user-5-avatar
-    const arrayPattern = /^(\w+)-(\d+)(?:-(.+))?$/;
-    const match = elementId.match(arrayPattern);
-    
-    if (match) {
-      return {
-        arrayName: match[1],
-        index: parseInt(match[2]),
-        property: match[3] || 'root',
-        isArrayElement: true
-      };
-    }
-    
-    return { isArrayElement: false };
-  };
-
-  // Helper function to extract component context from element
-  const getComponentContext = (element) => {
-    // Try to get component info from data attributes
-    const componentName = element.getAttribute('data-component');
-    const fileName = element.getAttribute('data-file');
-    const arrayName = element.getAttribute('data-array');
-    const arrayIndex = element.getAttribute('data-array-index');
-    
-    // If not found on current element, try to find in parent elements
-    let currentElement = element;
-    let foundContext = { componentName, fileName, arrayName, arrayIndex };
-    
-    while (currentElement && currentElement !== document.body && (!foundContext.componentName || !foundContext.fileName)) {
-      if (!foundContext.componentName) {
-        foundContext.componentName = currentElement.getAttribute('data-component');
-      }
-      if (!foundContext.fileName) {
-        foundContext.fileName = currentElement.getAttribute('data-file');
-      }
-      if (!foundContext.arrayName) {
-        foundContext.arrayName = currentElement.getAttribute('data-array');
-      }
-      if (!foundContext.arrayIndex) {
-        foundContext.arrayIndex = currentElement.getAttribute('data-array-index');
-      }
-      currentElement = currentElement.parentElement;
-    }
-    
-    return {
-      componentName: foundContext.componentName || 'Unknown',
-      fileName: foundContext.fileName || 'Unknown',
-      arrayName: foundContext.arrayName,
-      arrayIndex: foundContext.arrayIndex ? parseInt(foundContext.arrayIndex) : null
-    };
-  };
-
-  const selectElement = (element) => {
-    // Clear previous selection
+  const clearAllHighlights = () => {
     if (selectedElement) {
       selectedElement.classList.remove("inspector-selected");
     }
 
-    // Select new element
+    // Remove all highlight classes
+    document.querySelectorAll('.inspector-hover, .inspector-hover-array, .inspector-array-highlight').
+    forEach((el) => {
+      el.classList.remove('inspector-hover', 'inspector-hover-array', 'inspector-array-highlight');
+    });
+  };
+
+  const selectElement = (element) => {
+    clearAllHighlights();
+
     setSelectedElement(element);
     element.classList.add("inspector-selected");
 
-    // Parse array context from element ID
-    const arrayContext = parseArrayContext(element.id);
-    
-    // Get component context
-    const componentContext = getComponentContext(element);
-    
-    // Send enhanced message to parent (Nuxt) with array and component context
-    if (element.id && window.parent) {
-      const message = {
-        type: 'ELEMENT_SELECTED',
-        id: element.id,
-        arrayContext: arrayContext,
-        componentContext: componentContext,
-        elementInfo: {
-          tagName: element.tagName.toLowerCase(),
-          textContent: element.textContent,
-          className: element.className
-        }
-      };
-      
-      console.log("Sending message with array and component context:", message);
-      window.parent.postMessage(message, 'http://localhost:3000');
-    }
+    // Check map element status for debugging (can be removed in production)
+    const isMap = isMapElement(element);
+    const mapInfo = getMapInfo(element);
 
-    // Set editing text
-    setEditingText(element.textContent || "");
-
-    // Store original styles if not already stored
+    // Store original state
     if (!originalStyles.has(element)) {
-      const computedStyle = window.getComputedStyle(element);
       const newOriginalStyles = new Map(originalStyles);
       newOriginalStyles.set(element, {
-        color: computedStyle.color,
-        backgroundColor: computedStyle.backgroundColor,
-        fontSize: computedStyle.fontSize,
-        padding: computedStyle.padding,
-        margin: computedStyle.margin,
-        textContent: element.textContent,
+        classes: [...element.classList].filter((c) => c !== "inspector-selected"),
+        text: element.textContent || "",
+        style: { ...element.style }
       });
       setOriginalStyles(newOriginalStyles);
     }
-  };
 
-  const saveElementChange = (id, property, value) => {
-    try {
-      const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
-      if (!storedChanges[id]) {
-        storedChanges[id] = {};
-      }
-      storedChanges[id][property] = value;
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedChanges));
-      console.log(`Saved change for ${id}: ${property} = ${value}`);
-    } catch (e) {
-      console.error("Error saving to localStorage:", e);
+    // Set editing text only for non-map elements
+    if (isTextEditingAllowed(element)) {
+      setEditingText(element.textContent || "");
+    } else {
+      setEditingText("");
+    }
+
+    // Highlight similar elements if it's a map element
+    if (mapInfo && mapInfo.isMapElement) {
+      const similarElements = getAllSimilarElements().filter((el) => el !== element);
+      similarElements.forEach((el) => {
+        el.classList.add('inspector-array-highlight');
+      });
     }
   };
 
   const updateElementText = (newText) => {
-    if (!selectedElement) return;
-
-    setEditingText(newText);
-    selectedElement.textContent = newText;
-
-    // Parse array context for updates
-    const arrayContext = parseArrayContext(selectedElement.id);
-    
-    // Get component context for updates
-    const componentContext = getComponentContext(selectedElement);
-
-    // Send enhanced update message to parent (Nuxt)
-    if (selectedElement.id && window.parent) {
-      const message = {
-        type: 'ELEMENT_UPDATED',
-        id: selectedElement.id,
-        property: 'textContent',
-        value: newText,
-        arrayContext: arrayContext,
-        componentContext: componentContext
-      };
-      
-      console.log("Sending text update with array and component context:", message);
-      window.parent.postMessage(message, 'http://localhost:3000');
-    }
-
-    // Save change to localStorage only if enabled
-    if (saveToLocalStorage && selectedElement.id) {
-      saveElementChange(selectedElement.id, 'textContent', newText);
-    }
-  };
-
-  const updateElementStyle = (property, value) => {
-    if (!selectedElement) return;
-    
-    // Handle "Default" option - reset to original style
-    if (value === "" || value === "Default") {
-      const original = originalStyles.get(selectedElement);
-      if (original) {
-        // Remove existing Tailwind classes for this property
-        const removeExistingClasses = (property) => {
-          switch (property) {
-            case 'color':
-              selectedElement.className = selectedElement.className.replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '').trim();
-              break;
-            case 'backgroundColor':
-              selectedElement.className = selectedElement.className.replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '').trim();
-              break;
-            case 'fontSize':
-              selectedElement.className = selectedElement.className.replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '').trim();
-              break;
-            case 'padding':
-              selectedElement.className = selectedElement.className.replace(/p-\d+/g, '').trim();
-              break;
-          }
-        };
-
-        removeExistingClasses(property);
-        
-        // Reset to original computed style
-        selectedElement.style[property] = original[property];
-        
-        // Remove from localStorage
-        if (saveToLocalStorage && selectedElement.id) {
-          try {
-            const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
-            if (storedChanges[selectedElement.id]) {
-              delete storedChanges[selectedElement.id][property];
-              // If no more changes for this element, remove the element entry
-              if (Object.keys(storedChanges[selectedElement.id]).length === 0) {
-                delete storedChanges[selectedElement.id];
-              }
-              localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedChanges));
-            }
-          } catch (e) {
-            console.error("Error updating localStorage:", e);
-          }
-        }
-
-        // Send update message to parent (Nuxt)
-        if (selectedElement.id && window.parent) {
-          window.parent.postMessage(
-            { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: property, value: 'default' },
-            'http://localhost:3000'
-          );
-        }
-      }
+    if (!selectedElement || !isTextEditingAllowed(selectedElement)) {
+      console.warn('Text editing is disabled for map elements to preserve functionality.');
       return;
     }
-    
-    // Convert CSS values to Tailwind classes
-    const getTailwindClass = (property, value) => {
-      switch (property) {
-        case 'color':
-          const colorMap = {
-            '#000000': 'text-black',
-            '#374151': 'text-gray-700',
-            '#6B7280': 'text-gray-500',
-            '#EF4444': 'text-red-500',
-            '#3B82F6': 'text-blue-500',
-            '#10B981': 'text-green-500',
-            '#F59E0B': 'text-yellow-500',
-            '#8B5CF6': 'text-purple-500',
-            '#EC4899': 'text-pink-500',
-            '#6366F1': 'text-indigo-500'
-          };
-          return colorMap[value] || null;
-          
-        case 'backgroundColor':
-          const bgColorMap = {
-            'transparent': 'bg-transparent',
-            '#FFFFFF': 'bg-white',
-            '#F3F4F6': 'bg-gray-100',
-            '#E5E7EB': 'bg-gray-200',
-            '#FEE2E2': 'bg-red-100',
-            '#DBEAFE': 'bg-blue-100',
-            '#D1FAE5': 'bg-green-100',
-            '#FEF3C7': 'bg-yellow-100',
-            '#E9D5FF': 'bg-purple-100',
-            '#FCE7F3': 'bg-pink-100'
-          };
-          return bgColorMap[value] || null;
-          
-        case 'fontSize':
-          const fontSizeMap = {
-            '12px': 'text-xs',
-            '14px': 'text-sm',
-            '16px': 'text-base',
-            '18px': 'text-lg',
-            '20px': 'text-xl',
-            '24px': 'text-2xl',
-            '32px': 'text-3xl'
-          };
-          return fontSizeMap[value] || null;
-          
-        case 'padding':
-          const paddingMap = {
-            '4px': 'p-1',
-            '8px': 'p-2',
-            '12px': 'p-3',
-            '16px': 'p-4',
-            '20px': 'p-5',
-            '24px': 'p-6'
-          };
-          return paddingMap[value] || null;
-          
-        default:
-          return null;
-      }
-    };
 
-    const tailwindClass = getTailwindClass(property, value);
-    
-    if (tailwindClass) {
-      // Remove existing classes for this property
-      const removeExistingClasses = (property) => {
-        switch (property) {
-          case 'color':
-            selectedElement.className = selectedElement.className.replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '').trim();
-            break;
-          case 'backgroundColor':
-            selectedElement.className = selectedElement.className.replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '').trim();
-            break;
-          case 'fontSize':
-            selectedElement.className = selectedElement.className.replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '').trim();
-            break;
-          case 'padding':
-            selectedElement.className = selectedElement.className.replace(/p-\d+/g, '').trim();
-            break;
-        }
-      };
-
-      removeExistingClasses(property);
-      
-      // Add the new Tailwind class
-      selectedElement.classList.add(tailwindClass);
-    } else {
-      // Fallback to inline styles for values not mapped to Tailwind
-      selectedElement.style[property] = value;
-    }
-
-    // Send update message to parent (Nuxt)
-    if (selectedElement.id && window.parent) {
-      window.parent.postMessage(
-        { type: 'ELEMENT_UPDATED', id: selectedElement.id, property: property, value: tailwindClass || value },
-        'http://localhost:3000'
-      );
-    }
-
-    // Save change to localStorage only if enabled
-    if (saveToLocalStorage && selectedElement.id) {
-      saveElementChange(selectedElement.id, property, tailwindClass || value);
-    }
+    selectedElement.textContent = newText;
+    setEditingText(newText);
   };
 
   const resetElement = () => {
     if (!selectedElement) return;
 
-    const original = originalStyles.get(selectedElement);
-    if (original) {
-      // Remove all inspector-added Tailwind classes
-      selectedElement.className = selectedElement.className
-        .replace(/text-(black|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+|indigo-\d+)/g, '')
-        .replace(/bg-(transparent|white|gray-\d+|red-\d+|blue-\d+|green-\d+|yellow-\d+|purple-\d+|pink-\d+)/g, '')
-        .replace(/text-(xs|sm|base|lg|xl|2xl|3xl)/g, '')
-        .replace(/p-\d+/g, '')
-        .replace(/\s+/g, ' ')
-        .trim();
+    const elements = getAllSimilarElements();
+    elements.forEach((element) => {
+      const originalState = originalStyles.get(element);
+      if (originalState) {
+        // Reset classes
+        element.className = '';
+        originalState.classes.forEach((cls) => {
+          element.classList.add(cls);
+        });
 
-      // Reset inline styles to original computed values
-      selectedElement.style.color = original.color;
-      selectedElement.style.backgroundColor = original.backgroundColor;
-      selectedElement.style.fontSize = original.fontSize;
-      selectedElement.style.padding = original.padding;
-      selectedElement.style.margin = original.margin;
-      selectedElement.textContent = original.textContent;
-      setEditingText(original.textContent || "");
-    }
+        // Reset text content only for non-map elements
+        if (isTextEditingAllowed(element)) {
+          element.textContent = originalState.text;
+        }
 
-    // Also remove from localStorage if element has an ID and saving is enabled
-    if (saveToLocalStorage && selectedElement && selectedElement.id) {
-      try {
-        const storedChanges = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
-        delete storedChanges[selectedElement.id]; // Remove all changes for this element
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(storedChanges));
-        console.log(`Removed saved changes for ${selectedElement.id} from localStorage.`);
-      } catch (e) {
-        console.error("Error removing from localStorage on reset:", e);
+        // Reset inline styles
+        element.removeAttribute('style');
+        Object.assign(element.style, originalState.style);
       }
-    }
+    });
+
+    clearSelection();
   };
 
   const clearSelection = () => {
-    if (selectedElement) {
-      selectedElement.classList.remove("inspector-selected");
-      setSelectedElement(null);
-      setEditingText("");
-    }
+    clearAllHighlights();
+    setSelectedElement(null);
+    setEditingText("");
   };
 
-  // Function to clear all localStorage when toggle is turned off
-  const handleSaveToggle = (enabled) => {
-    setSaveToLocalStorage(enabled);
-    
-    if (!enabled) {
-      // Optionally clear all saved changes when turning off
-      try {
-        localStorage.removeItem(LOCAL_STORAGE_KEY);
-        console.log("Cleared all saved changes from localStorage.");
-      } catch (e) {
-        console.error("Error clearing localStorage:", e);
-      }
-    }
-  };
-
-  // Keyboard shortcuts
   useEffect(() => {
-    const handleKeyDown = (event) => {
-      // Toggle inspector with Ctrl/Cmd + Shift + I
-      if (
-        (event.ctrlKey || event.metaKey) &&
-        event.shiftKey &&
-        event.key === "I"
-      ) {
-        event.preventDefault();
-        toggleInspector();
-      }
-
-      // Exit inspect mode with Escape
-      if (event.key === "Escape") {
-        if (isInspecting) {
-          exitInspectMode();
-        } else if (selectedElement) {
-          clearSelection();
-        }
+    const handleKeyPress = (event) => {
+      if (event.key === 'Escape') {
+        exitInspectMode();
+        setIsVisible(false);
       }
     };
 
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [isInspecting, selectedElement]);
-
-  // Cleanup on unmount
-  useEffect(() => {
+    document.addEventListener('keydown', handleKeyPress);
     return () => {
-      exitInspectMode();
+      document.removeEventListener('keydown', handleKeyPress);
     };
   }, []);
 
-  const colorOptions = [
-    "#000000",
-    "#374151",
-    "#6B7280",
-    "#EF4444",
-    "#3B82F6",
-    "#10B981",
-    "#F59E0B",
-    "#8B5CF6",
-    "#EC4899",
-    "#6366F1",
-  ];
+  const mapInfo = selectedElement ? getMapInfo(selectedElement) : null;
+  const similarElementsCount = mapInfo?.isMapElement ? getAllSimilarElements().length : 1;
+  
 
-  const backgroundOptions = [
-    "transparent",
-    "#FFFFFF",
-    "#F3F4F6",
-    "#E5E7EB",
-    "#FEE2E2",
-    "#DBEAFE",
-    "#D1FAE5",
-    "#FEF3C7",
-    "#E9D5FF",
-    "#FCE7F3",
-  ];
 
-  if (!isVisible) {
-    return (
-      <div id="div-5" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="fixed top-5 right-5 z-[10000]">
-        <button id="button-6" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-          onClick={toggleInspector}
-          className="w-12 h-12 rounded-full bg-blue-500 text-white border-none text-xl cursor-pointer shadow-lg transition-all duration-200 hover:bg-blue-600 hover:scale-105"
-          title="Open Element Inspector (Ctrl+Shift+I)"
-        >
+  return (
+    <>
+      {/* Toggle Button */}
+      <div id="div-1" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="inspector-toggle">
+        <button id="button-2" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+        onClick={toggleInspector}
+        className="inspector-toggle-btn"
+        title="Toggle Element Inspector">
+
           🔍
         </button>
       </div>
-    );
-  }
 
-  return (
-    <div id="div-7" data-component="ElementInspector" data-file="src/ElementInspector.jsx" ref={inspectorRef} className="fixed top-5 right-5 w-[350px] max-h-[calc(100vh-40px)] bg-white border border-gray-200 rounded-lg shadow-xl font-sans text-sm z-[10000] overflow-hidden flex flex-col">
-      <div id="div-8" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="bg-slate-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <h3 id="h3-9" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 text-base font-semibold text-gray-800">Element Inspector</h3>
-        <div id="div-10" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex gap-2 items-center">
-          <button id="button-11" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-            onClick={toggleInspectMode}
-            className={`px-3 py-1.5 border border-gray-300 rounded text-xs cursor-pointer transition-all duration-200 hover:bg-gray-50 ${
-              isInspecting ? "bg-blue-500 text-white border-blue-500" : "bg-white text-gray-700"
-            }`}
-          >
-            {isInspecting ? "Exit Inspect" : "Inspect Element"}
-          </button>
-          <button id="button-12" data-component="ElementInspector" data-file="src/ElementInspector.jsx" 
-            onClick={toggleInspector} 
-            className="w-6 h-6 border-none bg-none text-gray-500 cursor-pointer rounded flex items-center justify-center text-lg hover:bg-gray-100 hover:text-gray-700"
-          >
-            ×
-          </button>
-        </div>
-      </div>
+      {/* Inspector Panel */}
+      {isVisible &&
+      <div id="div-3" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" ref={inspectorRef} className="element-inspector">
+          {/* Header */}
+          <div id="div-4" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="inspector-header">
+            <h3 id="h3-5" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 text-sm font-semibold text-gray-800">
+              Element Inspector
+            </h3>
+            <button id="button-6" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+          onClick={toggleInspector}
+          className="ml-auto text-gray-400 hover:text-gray-600 text-lg">
 
-      {/* Save to localStorage Toggle */}
-      <div id="div-13" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
-        <span id="span-14" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-xs font-medium text-gray-700">Save changes</span>
-        <label id="label-15" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center cursor-pointer">
-          <input id="input-16" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-            type="checkbox"
-            checked={saveToLocalStorage}
-            onChange={(e) => handleSaveToggle(e.target.checked)}
-            className="sr-only"
-          />
-          <div id="div-17" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className={`relative w-8 h-4 rounded-full transition-colors duration-200 ${
-            saveToLocalStorage ? 'bg-blue-500' : 'bg-gray-300'
-          }`}>
-            <div id="div-18" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${
-              saveToLocalStorage ? 'translate-x-4' : 'translate-x-0.5'
-            }`}></div>
-          </div>
-          <span id="span-19" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="ml-2 text-xs text-gray-600">
-            {saveToLocalStorage ? 'On' : 'Off'}
-          </span>
-        </label>
-      </div>
-
-      {selectedElement ? (
-        <div id="div-20" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex-1 overflow-y-auto p-4">
-          <div id="div-21" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
-            <h4 id="h4-22" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-2 text-sm font-semibold text-gray-800">Selected Element</h4>
-            <p id="p-23" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
-              <strong id="strong-24" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Tag:</strong> {selectedElement.tagName.toLowerCase()}
-            </p>
-            <p id="p-25" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
-              <strong id="strong-26" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Classes:</strong> {selectedElement.className || "None"}
-            </p>
-            <p id="p-27" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="my-1 text-gray-600 text-xs">
-              <strong id="strong-28" data-component="ElementInspector" data-file="src/ElementInspector.jsx">ID:</strong> {selectedElement.id || "None"}
-            </p>
-          </div>
-
-          <div id="div-29" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
-            <h4 id="h4-30" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-2 text-sm font-semibold text-gray-800">Edit Text</h4>
-            <textarea id="textarea-31" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-              value={editingText}
-              onChange={(e) => updateElementText(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded text-xs font-inherit resize-y min-h-[60px] focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
-              placeholder="Element text content..."
-            />
-          </div>
-
-          <div id="div-32" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
-            <h4 id="h4-33" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="m-0 mb-3 text-sm font-semibold text-gray-800">Style Controls</h4>
-
-            <div id="div-34" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
-              <label id="label-35" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Text Color</label>
-              <div id="div-36" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="grid grid-cols-5 gap-1">
-                {colorOptions.map((color) => (
-                  <button id={`colorOptions-${color.id || index}`} data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-array="colorOptions" data-array-index={index}
-                    key={color}
-                    onClick={() => updateElementStyle("color", color)}
-                    className="w-6 h-6 border border-gray-300 rounded cursor-pointer transition-transform duration-100 hover:scale-110 hover:border-gray-700"
-                    style={{ backgroundColor: color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div id="div-37" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
-              <label id="label-38" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Background Color</label>
-              <div id="div-39" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="grid grid-cols-5 gap-1">
-                {backgroundOptions.map((color) => (
-                  <button id={`backgroundOptions-${color.id || index}`} data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-array="backgroundOptions" data-array-index={index}
-                    key={color}
-                    onClick={() => updateElementStyle("backgroundColor", color)}
-                    className="w-6 h-6 border border-gray-300 rounded cursor-pointer transition-transform duration-100 hover:scale-110 hover:border-gray-700"
-                    style={{ backgroundColor: color === "transparent" ? "#ffffff" : color }}
-                    title={color}
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div id="div-40" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
-              <label id="label-41" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Font Size</label>
-              <select id="select-42" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-                onChange={(e) => updateElementStyle("fontSize", e.target.value)}
-                className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
-              >
-                <option id="option-43" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="">Default</option>
-                <option id="option-44" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="12px">12px</option>
-                <option id="option-45" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="14px">14px</option>
-                <option id="option-46" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="16px">16px</option>
-                <option id="option-47" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="18px">18px</option>
-                <option id="option-48" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="20px">20px</option>
-                <option id="option-49" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="24px">24px</option>
-                <option id="option-50" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="32px">32px</option>
-              </select>
-            </div>
-
-            <div id="div-51" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-3">
-              <label id="label-52" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block mb-1.5 text-xs font-medium text-gray-700">Padding</label>
-              <select id="select-53" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-                onChange={(e) => updateElementStyle("padding", e.target.value)}
-                className="w-full py-1.5 px-2 border border-gray-300 rounded text-xs bg-white focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_3px_rgba(59,130,246,0.1)]"
-              >
-                <option id="option-54" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="">Default</option>
-                <option id="option-55" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="4px">4px</option>
-                <option id="option-56" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="8px">8px</option>
-                <option id="option-57" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="12px">12px</option>
-                <option id="option-58" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="16px">16px</option>
-                <option id="option-59" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="20px">20px</option>
-                <option id="option-60" data-component="ElementInspector" data-file="src/ElementInspector.jsx" value="24px">24px</option>
-              </select>
-            </div>
-          </div>
-
-          <div id="div-61" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex gap-2 mt-4 pt-4 border-t border-gray-200">
-            <button id="button-62" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-              onClick={resetElement}
-              className="flex-1 py-2 px-3 border border-gray-300 rounded bg-white text-gray-700 cursor-pointer text-xs transition-all duration-200 hover:bg-gray-50"
-            >
-              Reset Element
-            </button>
-            <button id="button-63" data-component="ElementInspector" data-file="src/ElementInspector.jsx"
-              onClick={clearSelection}
-              className="flex-1 py-2 px-3 border border-gray-300 rounded bg-white text-gray-700 cursor-pointer text-xs transition-all duration-200 hover:bg-gray-50"
-            >
-              Clear Selection
+              ×
             </button>
           </div>
-        </div>
-      ) : (
-        <div id="div-64" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex-1 overflow-y-auto p-4">
-          <div id="div-65" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-center text-gray-500 italic my-5">
-            {isInspecting
-              ? "Click on an element to select it"
-              : "Click 'Inspect Element' to start selecting elements"}
+
+          {/* Inspect Button */}
+          <div id="div-7" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="p-4 border-b border-gray-200">
+            <button id="button-8" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+          onClick={toggleInspectMode}
+          className={`w-full py-2 px-4 rounded-lg font-medium transition-all ${
+          isInspecting ?
+          'bg-red-100 text-red-700 hover:bg-red-200' :
+          'bg-blue-100 text-blue-700 hover:bg-blue-200'}`
+          }>
+
+              {isInspecting ? '🔴 Stop Inspecting' : '🎯 Inspect Element'}
+            </button>
           </div>
+
+          {/* Main Content */}
+          {selectedElement ?
+        <div id="div-9" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="flex-1 overflow-y-auto p-4 space-y-6">
+              {/* Element Type Info */}
+              <div id="div-10" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="bg-gradient-to-r from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                {(mapInfo?.isMapElement || (selectedElement?.getAttribute('data-dynamic') === 'true' && selectedElement?.getAttribute('data-array'))) ?
+            <div id="div-11" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-2">
+                    <div id="div-12" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="w-3 h-3 bg-orange-500 rounded-full animate-pulse"></div>
+                    <div id="div-13" data-component="ElementInspector" data-file="src/ElementInspector.jsx">
+                      <h4 id="h4-14" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-semibold text-gray-800">🗂️ Map Element</h4>
+                      <p id="p-15" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="text-sm text-gray-600">
+                        From "{mapInfo?.arrayName || selectedElement?.getAttribute('data-array')}" array • Affects {similarElementsCount} similar elements
+                      </p>
+                      <p id="p-16" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-xs text-orange-600 mt-1">
+                        ⚠️ Text editing blocked to preserve dynamic content
+                      </p>
+                    </div>
+                  </div> :
+
+            <div id="div-17" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-2">
+                    <div id="div-18" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="w-3 h-3 bg-green-500 rounded-full"></div>
+                    <div id="div-19" data-component="ElementInspector" data-file="src/ElementInspector.jsx">
+                      <h4 id="h4-20" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-semibold text-gray-800">📄 Static Element</h4>
+                      <p id="p-21" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="text-sm text-gray-600">
+                        Independent {selectedElement.tagName.toLowerCase()} • Fully editable
+                      </p>
+                    </div>
+                  </div>
+            }
+              </div>
+
+              {/* Text Editing - Only for non-map elements */}
+              {!(mapInfo?.isMapElement || (selectedElement?.getAttribute('data-dynamic') === 'true' && selectedElement?.getAttribute('data-array'))) &&
+          <div id="div-22" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                  <h4 id="h4-23" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-2 mb-3">
+                    <span id="span-24" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-lg">✏️</span>
+                    <span id="span-25" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-semibold text-gray-800">Edit Text</span>
+                  </h4>
+                  <textarea id="textarea-26" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+            value={editingText}
+            onChange={(e) => updateElementText(e.target.value)}
+            className="w-full p-3 border border-gray-300 rounded-lg text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            placeholder="Type your text here..."
+            rows="3" />
+
+                </div>
+          }
+
+              {/* Map Element Info */}
+              {(mapInfo?.isMapElement || (selectedElement?.getAttribute('data-dynamic') === 'true' && selectedElement?.getAttribute('data-array'))) &&
+          <div id="div-27" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                  <div id="div-28" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-3">
+                    <span id="span-29" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-2xl">🔒</span>
+                    <div id="div-30" data-component="ElementInspector" data-file="src/ElementInspector.jsx">
+                      <h4 id="h4-31" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-bold text-amber-800 text-base">Text Editing Blocked</h4>
+                      <p id="p-32" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-amber-700 text-sm">
+                        This element is generated by a map function. Text content is managed by your data/state. 
+                        Only styling changes are available.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+          }
+
+              {/* Colors */}
+              <div id="div-33" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 id="h4-34" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-2 mb-4">
+                  <span id="span-35" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-lg">🎨</span>
+                  <span id="span-36" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-semibold text-gray-800">Colors</span>
+                </h4>
+                
+                {/* Text Colors */}
+                <div id="div-37" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-4">
+                  <label id="label-38" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block text-sm font-medium text-gray-700 mb-2">Text Color</label>
+                  <div id="div-39" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="grid grid-cols-5 gap-2">
+                    {colorOptions.map((color, index) =>
+                <button id="button-40" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+                key={index}
+                onClick={() => applyTextColor(color)}
+                className="group relative w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-blue-500"
+                style={{ backgroundColor: color.value }}
+                title={color.name}>
+
+                        <span id="span-41" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {color.name}
+                        </span>
+                      </button>
+                )}
+                  </div>
+                </div>
+
+                {/* Background Colors */}
+                <div id="div-42" data-component="ElementInspector" data-file="src/ElementInspector.jsx">
+                  <label id="label-43" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="block text-sm font-medium text-gray-700 mb-2">Background</label>
+                  <div id="div-44" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="grid grid-cols-5 gap-2">
+                    {backgroundOptions.map((bg, index) =>
+                <button id="button-45" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+                key={index}
+                onClick={() => applyBackgroundColor(bg)}
+                className="group relative w-10 h-10 rounded-lg border-2 border-gray-200 hover:border-gray-400 transition-all duration-200 hover:scale-110 focus:ring-2 focus:ring-blue-500"
+                style={{
+                  backgroundColor: bg.value === 'transparent' ? '#ffffff' : bg.value,
+                  backgroundImage: bg.value === 'transparent' ? 'linear-gradient(45deg, #ccc 25%, transparent 25%), linear-gradient(-45deg, #ccc 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #ccc 75%), linear-gradient(-45deg, transparent 75%, #ccc 75%)' : 'none',
+                  backgroundSize: bg.value === 'transparent' ? '8px 8px' : 'auto',
+                  backgroundPosition: bg.value === 'transparent' ? '0 0, 0 4px, 4px -4px, -4px 0px' : 'initial'
+                }}
+                title={bg.name}>
+
+                        <span id="span-46" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                          {bg.name}
+                        </span>
+                      </button>
+                )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Typography */}
+              <div id="div-47" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                <h4 id="h4-48" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="flex items-center space-x-2 mb-4">
+                  <span id="span-49" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-lg">🔤</span>
+                  <span id="span-50" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="font-semibold text-gray-800">Typography</span>
+                </h4>
+                <div id="div-51" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true" className="grid grid-cols-2 gap-3">
+                  {fontSizeOptions.map((size, index) =>
+              <button id="button-52" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+              key={index}
+              onClick={() => applyTailwindClass('fontSize', size.value, fontSizeOptions.map((s) => s.value))}
+              className="p-2 text-sm border border-gray-200 rounded-lg hover:border-blue-400 hover:bg-blue-50 transition-all">
+
+                      {size.name}
+                    </button>
+              )}
+                </div>
+              </div>
+
+              {/* Reset Button */}
+              <div id="div-53" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="pt-4 border-t">
+                <button id="button-54" data-component="ElementInspector" data-file="src/ElementInspector.jsx" data-dynamic="true"
+            onClick={resetElement}
+            className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-all">
+
+                  🔄 Reset to Original
+                </button>
+              </div>
+            </div> :
+
+        <div id="div-55" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="p-8 text-center text-gray-500">
+              <div id="div-56" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="text-4xl mb-4">🎯</div>
+              <p id="p-57" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Click "Inspect Element" and then click on any element to start editing</p>
+              <div id="div-58" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mt-4 text-sm">
+                <p id="p-59" data-component="ElementInspector" data-file="src/ElementInspector.jsx" className="mb-2">🗂️ <strong id="strong-60" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Map Elements</strong>: Styling only (text editing blocked)</p>
+                <p id="p-61" data-component="ElementInspector" data-file="src/ElementInspector.jsx">📄 <strong id="strong-62" data-component="ElementInspector" data-file="src/ElementInspector.jsx">Static Elements</strong>: Full editing (text + styling)</p>
+              </div>
+            </div>
+        }
         </div>
-      )}
-    </div>
-  );
+      }
+    </>);
+
 };
 
 export default ElementInspector;
