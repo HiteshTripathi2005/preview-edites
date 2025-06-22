@@ -1,0 +1,14 @@
+{
+  "name": "live-edites",
+  "version": "1.0.0",
+  "description": "A React application with automatic ID and data attribute generation for visual element inspection.",
+  "main": "index.js",
+  "scripts": {
+    "dev": "concurrently \"npm run dev --prefix react-dev\" \"npm run dev --prefix client\""
+  },
+  "author": "hitesh",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
