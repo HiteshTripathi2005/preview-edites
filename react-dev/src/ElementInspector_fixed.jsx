@@ -117,7 +117,8 @@ const ElementInspector = () => {
       changeType, // 'text', 'textColor', 'backgroundColor', 'fontSize', 'spacing', 'borderRadius', etc.
       changeData,
       element: {
-        id: selectedElement.id,        tagName: selectedElement.tagName.toLowerCase(),
+        id: selectedElement.id,
+        tagName: selectedElement.tagName.toLowerCase(),
         className: selectedElement.className,
         textContent: selectedElement.textContent,
         innerHTML: selectedElement.innerHTML.substring(0, 500), // Limit innerHTML length
@@ -127,7 +128,6 @@ const ElementInspector = () => {
           "data-array": selectedElement.getAttribute("data-array"),
           "data-array-index": selectedElement.getAttribute("data-array-index"),
           "data-dynamic": selectedElement.getAttribute("data-dynamic"),
-          "data-static-id": selectedElement.getAttribute("data-static-id"),
         },
         styles: {
           computed: getSerializableStyles(selectedElement),

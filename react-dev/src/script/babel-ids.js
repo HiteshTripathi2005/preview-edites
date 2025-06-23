@@ -157,26 +157,39 @@ function addIdsToFile(filePath) {
         // Check if ID already exists
         const hasId = node.attributes.some(attr => 
           t.isJSXAttribute(attr) && attr.name && attr.name.name === 'id'
-        );
-
-        if (!hasId) {
+        );        if (!hasId) {
           const arrayContext = findArrayContext(path);
           const isDynamic = isDynamicContent(path);
           const idValue = generateUniqueId(tagName, arrayContext, filePath);
           
-          // Create ID attribute
-          const idAttr = t.jsxAttribute(
-            t.jsxIdentifier('id'),
-            arrayContext 
-              ? t.jsxExpressionContainer(
-                  t.binaryExpression(
-                    '+',
-                    t.binaryExpression('+', t.stringLiteral(idValue + '-'), t.identifier(arrayContext.index)),
-                    t.stringLiteral('')
-                  )
+          // Create ID attributes - for array elements, we need both static and dynamic IDs
+          let idAttr, staticIdAttr;
+          
+          if (arrayContext) {
+            // Dynamic ID (e.g., "items-div-0", "items-div-1")
+            idAttr = t.jsxAttribute(
+              t.jsxIdentifier('id'),
+              t.jsxExpressionContainer(
+                t.binaryExpression(
+                  '+',
+                  t.binaryExpression('+', t.stringLiteral(idValue + '-'), t.identifier(arrayContext.index)),
+                  t.stringLiteral('')
                 )
-              : t.stringLiteral(idValue)
-          );
+              )
+            );
+            
+            // Static ID for styling all items in the array (e.g., "items-div-static")
+            staticIdAttr = t.jsxAttribute(
+              t.jsxIdentifier('data-static-id'),
+              t.stringLiteral(idValue + '-static')
+            );
+          } else {
+            // Regular static ID for non-array elements
+            idAttr = t.jsxAttribute(
+              t.jsxIdentifier('id'),
+              t.stringLiteral(idValue)
+            );
+          }
 
           // Create data attributes
           const dataComponentAttr = t.jsxAttribute(
@@ -187,10 +200,13 @@ function addIdsToFile(filePath) {
           const dataFileAttr = t.jsxAttribute(
             t.jsxIdentifier('data-file'),
             t.stringLiteral(relativeFilePath)
-          );
-
-          // Start with basic attributes
+          );          // Start with basic attributes
           const attributes = [idAttr, dataComponentAttr, dataFileAttr];
+          
+          // Add static ID for array elements
+          if (arrayContext && staticIdAttr) {
+            attributes.push(staticIdAttr);
+          }
           
           // Add array context attributes if in array
           if (arrayContext) {
@@ -332,9 +348,11 @@ What it does:
 
 Map Function Support:
   • Automatically detects .map() calls
-  • Generates IDs like: items-div-\${index}
+  • Generates dynamic IDs like: items-div-\${index}
+  • Generates static IDs like: items-div-static (via data-static-id)
   • Adds data-array="items" and data-array-index={index}
   • Marks as data-dynamic="true"
+  • Allows styling both individual items (dynamic ID) and all items (static ID)
     `);
   } else if (arg === '--all' || arg === '-a') {
     processAllFiles();
