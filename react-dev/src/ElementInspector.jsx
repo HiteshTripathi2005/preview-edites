@@ -389,11 +389,55 @@ const ElementInspector = () => {
           "inspector-hover-array",
           "inspector-array-highlight"
         );
-      });
-
-    // Set the selected element state
+      });    // Set the selected element state
     setSelectedElement(targetElement);
     targetElement.classList.add("inspector-selected");
+      // Set element info and calculate optimal label position for selected element (clean format)
+    const tagName = targetElement.tagName.toLowerCase();
+    const meaningfulClasses = Array.from(targetElement.classList)
+      .filter(c => !c.startsWith('inspector-') && !c.startsWith('data-') && c.length > 1)
+      .slice(0, 2)
+      .map(c => '.' + c)
+      .join('');
+    
+    let elementInfo = `<${tagName}>`;
+    if (meaningfulClasses) {
+      elementInfo += meaningfulClasses;
+    }
+    
+    // Add text content preview for selected element
+    const textContent = targetElement.textContent?.trim();
+    if (textContent && textContent.length > 0 && textContent.length < 15) {
+      elementInfo += ` "${textContent}"`;
+    } else if (textContent && textContent.length >= 15) {
+      elementInfo += ` "${textContent.substring(0, 12)}..."`;
+    }
+    
+    targetElement.setAttribute('data-element-info', elementInfo);
+    
+    // Calculate optimal label position for selected element
+    const rect = targetElement.getBoundingClientRect();
+    const labelHeight = 24;
+    const labelPadding = 8;
+    
+    let labelTop = rect.top - labelHeight - labelPadding;
+    let labelLeft = rect.left;
+    
+    if (labelTop < 0) {
+      labelTop = rect.bottom + labelPadding;
+    }
+    
+    const maxLeft = window.innerWidth - 200;
+    if (labelLeft > maxLeft) {
+      labelLeft = maxLeft;
+    }
+    
+    if (labelLeft < 10) {
+      labelLeft = 10;
+    }
+    
+    targetElement.style.setProperty('--label-top', `${labelTop}px`);
+    targetElement.style.setProperty('--label-left', `${labelLeft}px`);
 
     // Store original styles for undo functionality - handle similar elements for dynamic content
     const isTargetDynamic =
@@ -442,15 +486,13 @@ const ElementInspector = () => {
         element.id || `element-${Math.random().toString(36).substr(2, 9)}`;
       if (!element.id) {
         element.setAttribute("data-temp-id", elementKey);
-      }
-
-      if (!originalStyles.has(elementKey)) {
+      }      if (!originalStyles.has(elementKey)) {
         newOriginalStyles.set(elementKey, {
           classes: [...element.classList].filter(
             (c) => !c.startsWith("inspector-")
           ),
           text: element.textContent || "",
-          style: { ...element.style },
+          style: element.style.cssText || "",
         });
       }
     });
@@ -474,9 +516,7 @@ const ElementInspector = () => {
     } else {
       setEditingText("");
     }
-  }, []);
-
-  const handleElementHover = useCallback(
+  }, []);  const handleElementHover = useCallback(
     (event) => {
       // Don't highlight the inspector itself or already selected elements
       if (
@@ -517,9 +557,7 @@ const ElementInspector = () => {
       }
     },
     [selectedElement]
-  );
-
-  const handleElementHoverOut = useCallback((event) => {
+  );  const handleElementHoverOut = useCallback((event) => {
     event.stopPropagation();
     event.target.classList.remove("inspector-hover");
 
@@ -598,9 +636,7 @@ const ElementInspector = () => {
       clearSelection(); // Clear selection when closing inspector
     }
     setIsVisible(!isVisible);
-  };
-
-  const clearAllHighlights = () => {
+  };  const clearAllHighlights = () => {
     if (selectedElement) {
       selectedElement.classList.remove("inspector-selected");
     }
@@ -617,9 +653,7 @@ const ElementInspector = () => {
           "inspector-array-highlight"
         );
       });
-  };
-
-  const selectElement = (element) => {
+  };const selectElement = (element) => {
     clearAllHighlights();
 
     setSelectedElement(element);
@@ -636,13 +670,11 @@ const ElementInspector = () => {
     elementsToStore.forEach((el) => {
       const elementKey =
         el.id || `element-${Math.random().toString(36).substr(2, 9)}`;
-      if (!el.id) el.setAttribute("data-temp-id", elementKey);
-
-      if (!originalStyles.has(elementKey)) {
+      if (!el.id) el.setAttribute("data-temp-id", elementKey);      if (!originalStyles.has(elementKey)) {
         newOriginalStyles.set(elementKey, {
           classes: [...el.classList].filter((c) => !c.startsWith("inspector-")),
           text: el.textContent || "",
-          style: { ...el.style },
+          style: el.style.cssText || "",
         });
       }
     });
@@ -708,11 +740,11 @@ const ElementInspector = () => {
           if (element === selectedElement) {
             setEditingText(originalState.text);
           }
-        }
-
-        // Reset inline styles
+        }        // Reset inline styles
         element.removeAttribute("style");
-        Object.assign(element.style, originalState.style);
+        if (originalState.style) {
+          element.style.cssText = originalState.style;
+        }
 
         // Clean up temp ID
         if (element.getAttribute("data-temp-id")) {
@@ -746,7 +778,6 @@ const ElementInspector = () => {
     setSelectedElement(null);
     setEditingText("");
   };
-
   useEffect(() => {
     const handleKeyPress = (event) => {
       if (event.key === "Escape") {
@@ -755,11 +786,53 @@ const ElementInspector = () => {
       }
     };
 
+    // Listen for postMessages from parent (Nuxt)
+    const handleMessage = (event) => {
+      // Accept messages from localhost origins (both 3000 and 3001 for Nuxt)
+      if (event.origin === "http://localhost:3000" || event.origin === "http://localhost:3001") {
+        const message = event.data;
+          if (message.type === "START_INSPECTOR") {
+          console.log("📥 Received START_INSPECTOR from parent");
+          setIsVisible(true);
+          setTimeout(() => {
+            enterInspectMode();
+            // Send confirmation back to parent
+            try {
+              window.parent.postMessage({
+                type: "INSPECTOR_STATUS",
+                status: "started",
+                message: "Inspector started and ready for element selection"
+              }, "*");
+            } catch (error) {
+              console.warn("Could not send status to parent:", error);
+            }
+          }, 100); // Small delay to ensure UI is ready
+        } else if (message.type === "STOP_INSPECTOR") {
+          console.log("📥 Received STOP_INSPECTOR from parent");
+          exitInspectMode();
+          setIsVisible(false);
+          // Send confirmation back to parent
+          try {
+            window.parent.postMessage({
+              type: "INSPECTOR_STATUS", 
+              status: "stopped",
+              message: "Inspector stopped"
+            }, "*");
+          } catch (error) {
+            console.warn("Could not send status to parent:", error);
+          }
+        }
+      }
+    };
+
     document.addEventListener("keydown", handleKeyPress);
+    window.addEventListener("message", handleMessage);
+    
     return () => {
       document.removeEventListener("keydown", handleKeyPress);
+      window.removeEventListener("message", handleMessage);
     };
-  }, []);
+  }, [enterInspectMode, exitInspectMode]);
 
   // Safety cleanup for event listeners on component unmount
   useEffect(() => {

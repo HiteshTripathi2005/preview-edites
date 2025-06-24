@@ -8,25 +8,50 @@ import path from 'path';
 const traverse = _traverse.default || _traverse;
 const generate = _generate.default || _generate;
 
-let idCounter = 1;
-let fileIdCounters = new Map(); // Track counters per file for consistency
+// Set to track all generated IDs globally to ensure uniqueness
+let globalIdSet = new Set();
+
+function generateRandomId(length = 6) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
 
 function generateUniqueId(tagName, arrayInfo = null, filePath) {
-  // Use per-file counters to ensure consistency
-  if (!fileIdCounters.has(filePath)) {
-    fileIdCounters.set(filePath, 1);
-  }
+  let baseId;
+  let finalId;
+  let attempts = 0;
+  const maxAttempts = 100;
   
   if (arrayInfo) {
-    // Generate base ID for array elements
-    const baseId = `${arrayInfo.name}-${tagName}`;
+    // Generate base ID for array elements - use random suffix
+    const randomSuffix = generateRandomId(4);
+    baseId = `${arrayInfo.name}-${tagName}-${randomSuffix}`;
     return baseId; // We'll handle the index separately
   }
   
-  const counter = fileIdCounters.get(filePath);
-  const id = `${tagName}-${counter}`;
-  fileIdCounters.set(filePath, counter + 1);
-  return id;
+  // Generate truly unique random ID for regular elements
+  do {
+    const randomSuffix = generateRandomId(5);
+    finalId = `${tagName}-${randomSuffix}`;
+    attempts++;
+    
+    if (attempts >= maxAttempts) {
+      // Fallback: use timestamp + random
+      const timestamp = Date.now().toString(36);
+      const random = Math.random().toString(36).substr(2, 4);
+      finalId = `${tagName}-${timestamp}-${random}`;
+      break;
+    }
+  } while (globalIdSet.has(finalId));
+  
+  // Track this ID as used
+  globalIdSet.add(finalId);
+  
+  return finalId;
 }
 
 function getComponentName(filePath) {
@@ -123,9 +148,6 @@ function isDynamicContent(path) {
 function addIdsToFile(filePath) {
   try {
     const code = fs.readFileSync(filePath, 'utf8');
-    
-    // Reset counter for each file
-    fileIdCounters.set(filePath, 1);
     
     const ast = parse(code, {
       sourceType: 'module',
@@ -290,6 +312,9 @@ function processAllFiles() {
     return;
   }
   
+  // Clear global ID set for fresh start
+  globalIdSet.clear();
+  
   const files = getAllJsxFiles(srcDir);
 
   console.log(`🔍 Processing ${files.length} JSX/TSX files...`);
@@ -312,6 +337,9 @@ function processSingleFile(filePath) {
     return;
   }
   
+  // Clear global ID set for fresh start when processing single file
+  globalIdSet.clear();
+  
   const success = addIdsToFile(filePath);
   if (success) {
     console.log(`✅ IDs added to ${path.basename(filePath)}`);
@@ -326,7 +354,7 @@ if (process.argv.length > 2) {
   
   if (arg === '--help' || arg === '-h') {
     console.log(`
-🎯 Babel IDs - Automatic ID Generator for JSX/TSX Files
+🎯 Babel IDs - Automatic Unique ID Generator for JSX/TSX Files
 
 Usage:
   node babel-ids.js                    # Process all JSX/TSX files
@@ -339,18 +367,24 @@ Examples:
   npm run add-ids-file src/App.jsx    # Process specific file
 
 What it does:
-  ✅ Adds unique IDs (div-1, h1-2, etc.)
+  ✅ Adds truly unique random IDs (div-a3k9f, h1-x7m2p, etc.)
   ✅ Adds data-component attributes
   ✅ Adds data-file attributes
   ✅ Handles map functions automatically
   ✅ Detects dynamic content (data-dynamic="true")
   ✅ Adds array context attributes (data-array, data-array-index)
+  ✅ Prevents ID collisions globally
+
+Example Generated IDs:
+  • Regular elements: div-a3k9f, h1-x7m2p, button-k8w4t
+  • Array elements: items-div-k4m8-\${index}, todos-li-p9x2-\${index}
+  • Static IDs for arrays: data-static-id="items-div-k4m8-static"
 
 Map Function Support:
   • Automatically detects .map() calls
-  • Generates dynamic IDs like: items-div-\${index}
-  • Generates static IDs like: items-div-static (via data-static-id)
+  • Generates unique base IDs like: items-div-k4m8-\${index}
   • Adds data-array="items" and data-array-index={index}
+  • Adds data-static-id for styling all items in array
   • Marks as data-dynamic="true"
   • Allows styling both individual items (dynamic ID) and all items (static ID)
     `);
